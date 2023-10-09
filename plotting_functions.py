@@ -96,10 +96,22 @@ def centroids(min_intensity, ne_pixel, intensity_data):
     peak_pixels = []
     peak_values = []
 
+    """
     for i in range(3, len(ne_pixel) - 4):
         if (intensity_data[i] > min_intensity) and (intensity_data[i] > (intensity_data[i + 1] and intensity_data[i + 2] and intensity_data[i + 3])) and \
                 (intensity_data[i] < (intensity_data[i - 1] and intensity_data[i - 2] and intensity_data[i - 3])):
             peak_pixels.append(ne_pixel[i])
             peak_values.append(intensity_data[i])
+    """
+
+    for i in range(3, len(ne_pixel) - 4):
+        if (intensity_data[i] > min_intensity) and \
+                (intensity_data[i] > (intensity_data[i + 1] and intensity_data[i + 2]))\
+                and (intensity_data[i] < (intensity_data[i - 1] and intensity_data[i - 2])):
+
+            peak_pixels.append(ne_pixel[i])
+            peak_values.append(intensity_data[i])
 
     return peak_pixels, peak_values
+
+
