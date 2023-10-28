@@ -82,10 +82,35 @@ def line_eq(x, m, b):
 
     :param x: Input values
     :param m: Slope value
-    :param c: Y-intercept value
+    :param b: Y-intercept value
     :return: y = mx + b
     """
     return m * x + b
+
+
+def quad_eq(x, a, b, c):
+    """
+
+    :param x: Input values
+    :param a: Coefficient on x squared
+    :param b: Coefficient on x
+    :param c: Y-intercept
+    :return: y = ax^2 + bx + c
+    """
+    return a*x**2 + b*x + c
+
+
+def cubic_eq(x, a, b, c, d):
+    """
+
+    :param x: Input values
+    :param a: Coefficient on x cubed
+    :param b: Coefficient on x squared
+    :param c: Coefficient on x
+    :param d: Y-intercept
+    :return: y = ax^3 + bx^2 + cx + d
+    """
+    return a*x**3 + b*x**2 + c*x + d
 
 
 def centroids(min_intensity, ne_pixel, intensity_data):
@@ -118,7 +143,8 @@ def centroids(min_intensity, ne_pixel, intensity_data):
     return peak_pixels, peak_values
 
 
-def m_d_unc(values, unc_values, actual):
+def m_d_unc(a, u_a, b, u_b, p_b):
+
     """
     Returns uncertainty in multiplication of values with individual uncertainties
 
@@ -126,18 +152,38 @@ def m_d_unc(values, unc_values, actual):
     :param unc_values:
     :return: Uncertainty in final value
     """
-    total = 0.0
 
-    for i in range(len(values)):
-        total += (unc_values[i] / values[i]) ** 2
-
-    return np.sqrt(total) * actual
+    return np.sqrt((u_a / a) ** 2 + (p_b*u_b / b) ** 2) * (a*b**p_b)
 
 
 def a_s_unc(unc_values):
     """
+    Returns uncertainty in multiplication of values with individual uncertainties
 
-    :param unc_values: list of uncertainties
-    :return: Sum of uncertainties
+    :param unc_values:
+    :return: Uncertainty in final value
     """
-    return np.sum(unc_values)
+    total = 0.0
+
+    for i in range(len(unc_values)):
+        total += (unc_values[i]) ** 2
+
+    return np.sqrt(total)
+
+
+def model_fit(measured: list, predicted: list, uncertainty: list):
+    """
+    Precondition:
+    len(measured) == len(predicted) == len(uncertainty)
+
+    measured: list of measured values
+    predicted: list of predicted values
+    param uncertainty: list of uncertainties in measured values
+    returns: X_r squared metric
+    """
+    sums = 0
+
+    for i in range(0, len(measured)):
+        sums += ((measured[i] - predicted[i]) / (uncertainty[i])) ** 2
+
+    return sums / (len(measured) - 2)
