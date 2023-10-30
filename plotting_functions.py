@@ -20,6 +20,17 @@ def show():
     plt.show()
 
 
+def show(filename):
+    """
+
+    :param filename:
+    :return:
+    """
+
+    plt.legend()
+    plt.savefig(filename)
+    plt.show()
+
 def plot_info(title, x_name, y_name):
     """
     Adds axis titles to plot
@@ -56,7 +67,7 @@ def scatter(new, data1, data2, title="TITLE", x_name="X NAME", y_name="Y NAME", 
     plt.scatter(data1, data2, label=label, marker=style, color=color)
 
 
-def line(new, data1, data2, title, x_name, y_name, label, style=None, color='black'):
+def line(new, data1, data2, title="TITLE", x_name="X_NAME", y_name="Y_NAME", label=None, style=None, color='black'):
     """
     Plots a line plot from given information
 
@@ -187,3 +198,18 @@ def model_fit(measured: list, predicted: list, uncertainty: list):
         sums += ((measured[i] - predicted[i]) / (uncertainty[i])) ** 2
 
     return sums / (len(measured) - 2)
+
+
+def shape(fit):
+    return fit[0].shape
+
+
+def cleaning(raw_data, raw_time, darks, darks_time, flats, flats_time):
+
+    if shape(raw_data) == shape(darks) == shape(flats):
+        cleaned = raw_data / raw_time - darks / darks_time
+        flat_cleaned = flats / flats_time - darks / darks_time
+
+        return cleaned / flat_cleaned
+    else:
+        return "Not same shape"

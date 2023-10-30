@@ -3,10 +3,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as sc
 from scipy.signal import find_peaks
-
+from scipy.stats import linregress
 
 if __name__ == '__main__':
-
     """
     ----------------------------------------------------------------------------------------------------------------    
     # Opening the two files to write their data into numpy arrays:
@@ -57,7 +56,7 @@ if __name__ == '__main__':
     pf.line(True, pixels, ne_data, "Neon Lamp Calibration Spectrum", "Pixels", "Relative Intensity", "TODO", None,
             "black")
     pf.scatter(False, peak_pixels, peak_heights['peak_heights'], label="Peak Intensities", style='.', color='red')
-    plt.show()
+    pf.show("Plots/Intensity Plots/Neon Lamp Data")
 
     """
     ----------------------------------------------------------------------------------------------------------------
@@ -76,49 +75,37 @@ if __name__ == '__main__':
                                 595, 611, 698, 742, 804, 830, 916, 928, 938, 954, 963])
     waves = np.array([540.056, 576.441, 582.015, 585.249, 588.189, 594.483, 597.553, 602.000, 607.433, 614.306, 616.359,
                       621.728, 626.649, 638.299, 640.255, 650.653, 653.288, 659.895, 667.828, 671.704, 692.947, 703.241,
-                      717.394, 724.512, 743.890, 747.224, 748.887, 753.377, 754.404])
+                      717.394, 724.512, 743.890, 747.224, 748.887, 753.377, 754.404]) * 1e-9
 
     # Linear Fit of Data
     popt_linear, pcov_linear = sc.curve_fit(pf.line_eq, pixels_of_peaks, waves)
     slope, intercept = popt_linear[0], popt_linear[1]
     u_slope, u_intercept = np.sqrt(np.diag(pcov_linear))
 
-    # Quadratic Fit of Data
-    popt_quad, pcov_quad = sc.curve_fit(pf.quad_eq, pixels_of_peaks, waves)
-    a_quad, b_quad, c_quad = popt_quad
-    u_a_quad, u_b_quad, u_c_quad = np.sqrt(np.diag(pcov_quad))
-
-    # Cubic Fit of Data
-    popt_cube, pcov_cube = sc.curve_fit(pf.cubic_eq, pixels_of_peaks, waves)
-    a_cube, b_cube, c_cube, d_cube = popt_cube
-    u_a_cube, u_b_cube, u_c_cube, u_d_cube = np.sqrt(np.diag(pcov_cube))
-
     # Linear Data Plotting
-    predicted_line = [pf.line_eq(p, slope, intercept) for p in peak_pixels]
-    unc_predicted_line = [pf.m_d_unc([slope, p], [u_slope, 0.5], slope * p) for p in pixels_of_peaks] + u_intercept
+    predicted_line = [pf.line_eq(p, slope, intercept) for p in pixels_of_peaks]
 
-    pf.line(True, peak_pixels, predicted_line, "Wavelength vs. Pixels", 'Pixels', r'Wavelengths ($m$)',
+    # R^2 value of Data
+    r2_data = linregress(waves, predicted_line)[2]
+
+    # Plotting the previous plot with peaks added
+    pf.scatter(True, pixels_of_peaks, waves)
+    pf.line(False, pixels_of_peaks, predicted_line, "Wavelength vs. Pixels", 'Pixels', r'Wavelengths ($m$)',
             'Wavelength Solution', None, color='red')
 
-    # Quadratic Data Plotting
-    predicted_quad = [pf.quad_eq(p, a_quad, b_quad, c_quad) for p in peak_pixels]
-    unc_predicted_quad = [pf.m_d_unc([a_quad, p**2], [u_a_quad, 0.5], a_quad * p ** 2) + pf.m_d_unc([b_quad, p],
-                            [u_b_quad, 0.5], b_quad * p) for p in pixels_of_peaks] + u_c_quad
+    pf.show("Plots/Fits/1-Wavelength vs Pixels")
 
-    pf.line(False, peak_pixels, predicted_quad, "Wavelength vs. Pixels", 'Pixels', r'Wavelengths ($m$)',
-            label='Wavelength Solution', style=None, color="blue")
+    """-----Residuals-----"""
+    u_wavelengths_line = [pf.a_s_unc([pf.m_d_unc(slope, u_slope, p, 0.5, 1), u_intercept]) for p in pixels_of_peaks]
 
-    # Cubic Data Plotting
-    predicted_cube = [pf.cubic_eq(p, a_cube, b_cube, c_cube, d_cube) for p in peak_pixels]
-    unc_predicted_cube = [pf.m_d_unc([a_cube, p ** 3], [u_a_cube, 0.5], a_cube * p ** 3) + pf.m_d_unc([b_cube, p**2],
-                            [u_b_cube, 0.5], b_cube * p**2) + pf.m_d_unc([c_cube, p], [u_c_cube, 0.5], c_cube * p) for p
-                          in pixels_of_peaks] + u_c_quad
+    residual_line = predicted_line - waves
 
-    pf.line(False, peak_pixels, predicted_cube, "Wavelength vs. Pixels", 'Pixels', r'Wavelengths ($m$)',
-            label='Wavelength Solution', style=None, color="green")
+    pf.scatter(True, pixels_of_peaks, residual_line, "Residuals of Wavelength Data from Linear Fit",
+               "Index", "Difference from Actual Value", "Residuals of Gathered Data")
+    plt.errorbar(pixels_of_peaks, residual_line, xerr=np.ones(len(residual_line)) * 0.5, yerr=u_wavelengths_line, label="Uncertainties")
+    plt.hlines(0, xmin=-1, xmax=1000, colors="red", label="Zero Line")
 
-    pf.show()
-
+    pf.show("Plots/Residuals/1-Residuals Linear")
     """
     #----------------------------------------------------------------------------------------------------------------
     # Applying the Wavelength Solution:
@@ -128,16 +115,17 @@ if __name__ == '__main__':
     #----------------------------------------------------------------------------------------------------------------
     """
 
-    prop_const = 2.987e-3
+    prop_const = 2.987e-3           # Units of meter Kelvins
 
+    # Finding the Max Intensity
     max_bb = max(bb_data)
-
     max_elem = np.where(bb_data == max_bb)[0][0]
     max_wave = pf.line_eq(pixels[max_elem], slope, intercept)
 
-    unc_max_wave = pf.m_d_unc([slope, max_elem], [u_slope, (np.sqrt(2)) / (2)], max_elem * slope) + u_intercept
+    # Uncertainty in the observed wavelength
+    unc_max_wave = pf.a_s_unc((pf.m_d_unc(slope, u_slope, max_elem, 0.5, 1), u_intercept))
 
+    # Temperature Calculation and Uncertainty
     temperature = prop_const / max_wave
-    unc_temperature = pf.m_d_unc([max_wave], [unc_max_wave], temperature)
+    unc_temperature = (unc_max_wave / max_wave) * temperature
     print(f"The temperature found for the blackbody data is {temperature:.5} \u00B1 {unc_temperature:.3} Kelvin")
-
